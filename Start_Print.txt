@@ -1,0 +1,63 @@
+[gcode_macro START_PRINT]
+gcode :
+    {% set BED_TEMP = params.BED_TEMP|default(60)|float %}
+    {% set EXTRUDER_TEMP = params.EXTRUDER_TEMP|default(200)|float %}
+
+    # Démarrer le chauffage du lit
+    M140 S{param.BED_TEMP}
+    M104 S{params.EXTRUDER_TEMP|float*0.6}
+
+    # Utiliser les coordonnées absolues
+    G90
+
+    # Réinitialiser le décalage Z du code G (ajuster le décalage Z si nécessaire)
+    SET_GCODE_OFFSET Z =0.0
+
+    # Home des axes de l'imprimante
+    {% if printer.homed_axes != 'XYZ' %}
+	G28
+    {% endif %}
+
+    # Maillage du plateau
+    {% if printer.heater_bed.temperature > param.BED_TEMP|float*0,85 %}
+	G29
+    {% else %}
+	M190 S(param.BED_TEMP|float*0.85)
+	G29
+    {% endif %}
+
+    # Déplacez la buse près du lit
+    G1 Z5 F3000
+
+    # Déplacer la buse très près du lit
+    G1 Z0.15 F300
+
+    # Attendre que le lit atteigne la température
+    M190 S{BED_TEMP}
+
+    # Attendre que la buse atteigne la température
+    M109 S{EXTRUDER_TEMP}
+
+    # Reset de l'extrudeur
+    G92 E0
+
+    # Déplacement à la position de départ de la ligne d'amorçage
+    G1 X3 Y10 Z0.25 F5000
+
+    # Première ligne d'amorçage
+    G1 X3 Y110 F1500 E15
+
+    # Décalage pour la deuxième ligne
+    G1 X3.5 Y110 F1500
+
+    # Deuxième ligne d'amorçage
+    G1 X3.5 Y20 F1500 E30
+
+    # Essuyage de la buse
+    G1 X3.5 Y10 F750
+
+    # Reset de l'extrudeur
+    G92 E0
+
+    # Remonté en Z pour sécurité
+    G1 Z2 F3000
